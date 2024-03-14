@@ -66,7 +66,7 @@ def main():
         if prediction == 1:
             st.write("The input text is classified as spam.")
         else:
-            st.write("The input text is classified as ham (non-spam).")
+            st.write("The input text is classified as non-spam.")
 
 if __name__ == "__main__":
     main()
