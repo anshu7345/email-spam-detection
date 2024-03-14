@@ -11,41 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import streamlit as st
-from streamlit.logger import get_logger
+import tensorflow as tf
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import numpy as np
 
-LOGGER = get_logger(__name__)
+# Load the trained model
+model = tf.keras.models.load_model('spam_classifier_model')
 
+# Define the maximum length for padding sequences
+max_len = 100
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
-    )
+# Function to preprocess input text
+def preprocess_text(text):
+    # Tokenize the text
+    sequence = tokenizer.texts_to_sequences([text])
+    # Pad sequences
+    padded_sequence = pad_sequences(sequence, maxlen=max_len)
+    return padded_sequence
 
-    st.write("# Welcome to Streamlit! 👋")
+# Streamlit application
+def main():
+    st.title("Email Spam Classification")
+    st.write("Enter the email text below:")
 
-    st.sidebar.success("Select a demo above.")
+    # Get user input
+    user_input = st.text_input("Email text", "")
 
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
-
+    if st.button("Classify"):
+        # Preprocess the input text
+        processed_text = preprocess_text(user_input)
+        # Make prediction
+        prediction = model.predict(processed_text)
+        # Convert prediction to human-readable label
+        if prediction > 0.5:
+            st.write("This email is predicted to be spam.")
+        else:
+            st.write("This email is predicted to be ham.")
 
 if __name__ == "__main__":
-    run()
+    main()
