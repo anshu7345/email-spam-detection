@@ -17,7 +17,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import numpy as np
 
 # Load the trained model
-model = tf.keras.models.load_model('spam_classifier_model')
+model = tf.keras.models.load_model('saved_model.pb')
 
 # Define the maximum length for padding sequences
 max_len = 100
