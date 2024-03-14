@@ -12,44 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import streamlit as st
-import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+import pandas as pd
 import numpy as np
+import tensorflow as tf
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import load_model
+from sklearn.metrics import classification_report
 
-# Load the trained model
-model = tf.keras.models.load_model('spam_classifier_model.h5')
+# Load the model
+model = load_model('spam_classifier_model1.h5')
 
-
-
-# Define the maximum length for padding sequences
-max_len = 100
-
-# Function to preprocess input text
+# Function to preprocess text
 def preprocess_text(text):
-    # Tokenize the text
-    sequence = tokenizer.texts_to_sequences([text])
-    # Pad sequences
-    padded_sequence = pad_sequences(sequence, maxlen=max_len)
-    return padded_sequence
+    max_len = 100
+    tokenizer = Tokenizer(num_words=10000)
+    tokenizer.fit_on_texts(text)
+    X_seq = tokenizer.texts_to_sequences(text)
+    X_pad = pad_sequences(X_seq, maxlen=max_len)
+    return X_pad
 
-# Streamlit application
+# Function to predict
+def predict(text):
+    preprocessed_text = preprocess_text([text])
+    prediction = model.predict(preprocessed_text)[0][0]
+    return prediction
+
+# Function to convert prediction to label
+def prediction_to_label(prediction):
+    if prediction > 0.5:
+        return 'Spam'
+    else:
+        return 'Ham'
+
+# Streamlit UI
 def main():
-    st.title("Email Spam Classification")
-    st.write("Enter the email text below:")
+    st.title('Email Spam Classifier')
 
-    # Get user input
-    user_input = st.text_input("Email text", "")
+    # Input text box for user input
+    user_input = st.text_area("Enter email text:", "")
 
-    if st.button("Classify"):
-        # Preprocess the input text
-        processed_text = preprocess_text(user_input)
-        # Make prediction
-        prediction = model.predict(processed_text)
-        # Convert prediction to human-readable label
-        if prediction > 0.5:
-            st.write("This email is predicted to be spam.")
-        else:
-            st.write("This email is predicted to be ham.")
+    # Button to predict
+    if st.button('Predict'):
+        if user_input:
+            prediction = predict(user_input)
+            label = prediction_to_label(prediction)
+            st.write(f"Prediction: {label} (Probability: {prediction:.2f})")
 
-if __name__ == "__main__":
+# Run the app
+if __name__ == '__main__':
     main()
+
+
