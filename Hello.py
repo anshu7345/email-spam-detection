@@ -1,16 +1,3 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -18,50 +5,68 @@ import tensorflow as tf
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense, SpatialDropout1D
 from sklearn.metrics import classification_report
 
-# Load the model
-model = load_model('spam_classifier_model1.h5')
+# Load the dataset
+data = pd.read_csv('lingSpam.csv')  # Replace 'lingSpam.csv' with your dataset file path
+X = data['Body']  # Email text
+y = data['Label']  # Spam or ham label
 
-# Function to preprocess text
+# Preprocess the text
+max_words = 10000
+max_len = 100
+tokenizer = Tokenizer(num_words=max_words)
+tokenizer.fit_on_texts(X)
+X_seq = tokenizer.texts_to_sequences(X)
+X_pad = pad_sequences(X_seq, maxlen=max_len)
+
+# Encode labels
+encoder = LabelEncoder()
+y_enc = encoder.fit_transform(y)
+
+# Build the RNN model
+model = Sequential([
+    Embedding(input_dim=max_words, output_dim=128),
+    SpatialDropout1D(0.2),
+    LSTM(64, dropout=0.2, recurrent_dropout=0.2),
+    Dense(1, activation='sigmoid')
+])
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+model.fit(X_pad, y_enc, batch_size=32, epochs=5)
+
+# Function to preprocess input text
 def preprocess_text(text):
-    max_len = 100
-    tokenizer = Tokenizer(num_words=10000)
-    tokenizer.fit_on_texts(text)
-    X_seq = tokenizer.texts_to_sequences(text)
-    X_pad = pad_sequences(X_seq, maxlen=max_len)
-    return X_pad
+    # Tokenize the text
+    seq = tokenizer.texts_to_sequences([text])
+    # Pad sequences
+    padded_seq = pad_sequences(seq, maxlen=max_len)
+    return padded_seq
 
-# Function to predict
-def predict(text):
-    preprocessed_text = preprocess_text([text])
-    prediction = model.predict(preprocessed_text)[0][0]
-    return prediction
-
-# Function to convert prediction to label
-def prediction_to_label(prediction):
-    if prediction > 0.5:
-        return 'Spam'
-    else:
-        return 'Ham'
-
-# Streamlit UI
+# Define the Streamlit UI
 def main():
-    st.title('Email Spam Classifier')
+    st.title("Spam Classification App")
 
-    # Input text box for user input
-    user_input = st.text_area("Enter email text:", "")
+    # Take input text from the user
+    input_text = st.text_area("Enter the text to classify:", "")
 
-    # Button to predict
-    if st.button('Predict'):
-        if user_input:
-            prediction = predict(user_input)
-            label = prediction_to_label(prediction)
-            st.write(f"Prediction: {label} (Probability: {prediction:.2f})")
+    # Classify button
+    if st.button("Classify"):
+        # Preprocess the input text
+        preprocessed_text = preprocess_text(input_text)
 
-# Run the app
-if __name__ == '__main__':
+        # Predict using the trained model
+        prediction = (model.predict(preprocessed_text) > 0.5).astype("int32")
+
+        # Interpret the prediction
+        if prediction == 1:
+            st.write("The input text is classified as spam.")
+        else:
+            st.write("The input text is classified as ham (non-spam).")
+
+if __name__ == "__main__":
     main()
-
-
